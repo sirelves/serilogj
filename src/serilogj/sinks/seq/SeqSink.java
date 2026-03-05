@@ -9,6 +9,7 @@ import java.io.StringWriter;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.LinkedList;
@@ -113,43 +114,44 @@ public class SeqSink extends PeriodicBatchingSink {
 
 		payload.write("]}");
 
+		HttpURLConnection con = null;
 		try {
-			HttpURLConnection con = (HttpURLConnection) baseUrl.openConnection();
+			con = (HttpURLConnection) baseUrl.openConnection();
 			con.setRequestMethod("POST");
 			httpHeaders.forEach(con::setRequestProperty);
 			con.setDoOutput(true);
 
-			OutputStream os = con.getOutputStream();
-			os.write(payload.toString().getBytes("UTF8"));
-			os.flush();
-			os.close();
+			try (OutputStream os = con.getOutputStream()) {
+				os.write(payload.toString().getBytes(StandardCharsets.UTF_8));
+				os.flush();
+			}
 
-			InputStream stream;
 			int responseCode = con.getResponseCode();
-			if (responseCode < 200 || responseCode >= 300) {
-				stream = con.getErrorStream();
-			} else {
-				stream = con.getInputStream();
-			}
+			InputStream stream = (responseCode >= 200 && responseCode < 300)
+					? con.getInputStream() : con.getErrorStream();
 
-			String line = "";
-			String response = "";
-			BufferedReader in = new BufferedReader(new InputStreamReader(stream, "UTF8"));
-			while ((line = in.readLine()) != null) {
-				response += line;
+			StringBuilder response = new StringBuilder();
+			try (BufferedReader in = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))) {
+				String line;
+				while ((line = in.readLine()) != null) {
+					response.append(line);
+				}
 			}
-			in.close();
 
 			if (responseCode < 200 || responseCode >= 300) {
-				throw new IOException(response);
+				throw new IOException(response.toString());
 			}
 
-			LogEventLevel level = SeqApi.readEventInputResult(response);
+			LogEventLevel level = SeqApi.readEventInputResult(response.toString());
 			if (level != null && levelSwitch == null) {
 				levelSwitch = new LoggingLevelSwitch(level);
 			}
 		} catch (IOException e) {
 			SelfLog.writeLine("Error sending events to Seq, exception %s", e.getMessage());
+		} finally {
+			if (con != null) {
+				con.disconnect();
+			}
 		}
 	}
 

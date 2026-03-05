@@ -60,7 +60,7 @@ public class RollingFileSink implements ILogEventSink, Closeable {
 	private void alignCurrentFileTo(LocalDateTime date) {
 		if (nextCheckpoint == null) {
 			openFile(date);
-		} else if (date.isAfter(nextCheckpoint) || date.isAfter(nextCheckpoint)) {
+		} else if (!date.isBefore(nextCheckpoint)) {
 			closeFile();
 			openFile(date);
 		}

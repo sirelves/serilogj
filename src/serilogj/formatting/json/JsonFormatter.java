@@ -273,10 +273,12 @@ public class JsonFormatter implements ITextFormatter {
 		output.write("}");
 	}
 
+	private static final ThreadLocal<SimpleDateFormat> DATE_FORMATTER = ThreadLocal.withInitial(
+			() -> new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ"));
+
 	private void writeDate(Object value, Boolean quote, Writer output) throws IOException {
-		SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
 		output.write("\"");
-		output.write(formatter.format(value));
+		output.write(DATE_FORMATTER.get().format(value));
 		output.write("\"");
 	}
 
@@ -333,7 +335,7 @@ public class JsonFormatter implements ITextFormatter {
 					break;
 				default:
 					escapedResult.append("\\u");
-					escapedResult.append(String.format("%04X", new Integer(c)));
+					escapedResult.append(String.format("%04X", (int) c));
 					break;
 				}
 			}

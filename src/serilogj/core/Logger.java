@@ -1,14 +1,16 @@
 package serilogj.core;
 
 import java.io.Closeable;
-import java.util.Date;
 import java.io.IOException;
+import java.util.Date;
+import java.util.Map;
 
 import serilogj.ILogger;
 import serilogj.core.enrichers.FixedPropertyEnricher;
 import serilogj.debugging.SelfLog;
 import serilogj.events.LogEvent;
 import serilogj.events.LogEventLevel;
+import serilogj.events.LogEventPropertyValue;
 import serilogj.parameters.MessageTemplateProcessor;
 import serilogj.parameters.MessageTemplateProcessorResult;
 
@@ -31,6 +33,7 @@ public class Logger implements ILogger, ILogEventSink, Closeable {
 	private final ILogEventSink sink;
 	private final ILogEventEnricher[] enrichers;
 	private final Boolean closeSink;
+	private final Map<String, LogEventLevel> minimumLevelOverrides;
 
 	// It's important that checking minimum level is a very
 	// quick (CPU-cacheable) read in the simple case, hence
@@ -42,6 +45,12 @@ public class Logger implements ILogger, ILogEventSink, Closeable {
 
 	public Logger(MessageTemplateProcessor messageTemplateProcessor, LogEventLevel minimumLevel, ILogEventSink sink,
 			ILogEventEnricher[] enrichers, LoggingLevelSwitch levelSwitch, Boolean closeSink) {
+		this(messageTemplateProcessor, minimumLevel, sink, enrichers, levelSwitch, null, closeSink);
+	}
+
+	public Logger(MessageTemplateProcessor messageTemplateProcessor, LogEventLevel minimumLevel, ILogEventSink sink,
+			ILogEventEnricher[] enrichers, LoggingLevelSwitch levelSwitch,
+			Map<String, LogEventLevel> minimumLevelOverrides, Boolean closeSink) {
 		if (sink == null) {
 			throw new IllegalArgumentException("sink");
 		}
@@ -54,6 +63,7 @@ public class Logger implements ILogger, ILogEventSink, Closeable {
 		this.sink = sink;
 		this.levelSwitch = levelSwitch;
 		this.enrichers = enrichers;
+		this.minimumLevelOverrides = minimumLevelOverrides;
 		this.closeSink = closeSink;
 	}
 
@@ -116,7 +126,34 @@ public class Logger implements ILogger, ILogEventSink, Closeable {
 			}
 		}
 
+		if (minimumLevelOverrides != null) {
+			LogEventPropertyValue sourceContextValue = logEvent.getProperties().get(Constants.SourceContextPropertyName);
+			if (sourceContextValue instanceof serilogj.events.ScalarValue) {
+				Object scalarVal = ((serilogj.events.ScalarValue) sourceContextValue).getValue();
+				if (scalarVal instanceof String) {
+					String sourceContext = (String) scalarVal;
+					LogEventLevel override = getOverrideLevel(sourceContext);
+					if (override != null && logEvent.getLevel().ordinal() < override.ordinal()) {
+						return;
+					}
+				}
+			}
+		}
+
 		sink.emit(logEvent);
+	}
+
+	private LogEventLevel getOverrideLevel(String sourceContext) {
+		LogEventLevel best = null;
+		int bestLength = -1;
+		for (Map.Entry<String, LogEventLevel> entry : minimumLevelOverrides.entrySet()) {
+			String prefix = entry.getKey();
+			if (sourceContext.startsWith(prefix) && prefix.length() > bestLength) {
+				best = entry.getValue();
+				bestLength = prefix.length();
+			}
+		}
+		return best;
 	}
 	
 	@Override

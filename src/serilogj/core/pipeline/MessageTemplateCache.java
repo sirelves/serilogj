@@ -1,6 +1,6 @@
 package serilogj.core.pipeline;
 
-import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import serilogj.core.*;
 import serilogj.events.*;
 
@@ -19,7 +19,7 @@ import serilogj.events.*;
 // limitations under the License.
 public class MessageTemplateCache implements IMessageTemplateParser {
 	private IMessageTemplateParser innerParser;
-	private Map<String, MessageTemplate> templates = new HashMap<String, MessageTemplate>();
+	private ConcurrentHashMap<String, MessageTemplate> templates = new ConcurrentHashMap<String, MessageTemplate>();
 
 	private static final int MaxCacheItems = 1000;
 	private static final int MaxCachedTemplateLength = 1024;
@@ -40,37 +40,18 @@ public class MessageTemplateCache implements IMessageTemplateParser {
 			return innerParser.parse(messageTemplate);
 		}
 
-		MessageTemplate result = null;
-		synchronized (templates) {
-			if (templates.containsKey(messageTemplate)) {
-				result = templates.get(messageTemplate);
-				return result;
-			}
+		MessageTemplate result = templates.get(messageTemplate);
+		if (result != null) {
+			return result;
 		}
 
 		result = innerParser.parse(messageTemplate);
 
-		synchronized (templates) {
-			// Exceeding MaxCacheItems is *not* the sunny day scenario; all
-			// we're doing here is preventing out-of-memory
-			// conditions when the library is used incorrectly. Correct use
-			// (templates, rather than
-			// direct message strings) should barely, if ever, overflow this
-			// cache.
-
-			// Changing workloads through the lifecycle of an app instance mean
-			// we can gain some ground by
-			// potentially dropping templates generated only in startup, or only
-			// during specific infrequent
-			// activities.
-
-			if (templates.size() == MaxCacheItems) {
-				templates.clear();
-			}
-
-			templates.put(messageTemplate, result);
+		if (templates.size() >= MaxCacheItems) {
+			templates.clear();
 		}
 
-		return result;
+		templates.putIfAbsent(messageTemplate, result);
+		return templates.get(messageTemplate);
 	}
 }

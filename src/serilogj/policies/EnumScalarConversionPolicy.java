@@ -1,7 +1,7 @@
 package serilogj.policies;
 
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import serilogj.core.ILogEventPropertyValueFactory;
 import serilogj.core.IScalarConversionPolicy;
@@ -23,9 +23,10 @@ import serilogj.events.ScalarValue;
 // limitations under the License.
 
 public class EnumScalarConversionPolicy implements IScalarConversionPolicy {
-	private Map<Class<?>, Map<Integer, ScalarValue>> _values = new HashMap<Class<?>, Map<Integer, ScalarValue>>();
+	private final ConcurrentHashMap<Class<?>, ConcurrentHashMap<Integer, ScalarValue>> _values = new ConcurrentHashMap<>();
 
 	@Override
+	@SuppressWarnings("rawtypes")
 	public ScalarConversionPolicyResult tryConvertToScalar(Object value,
 			ILogEventPropertyValueFactory propertyValueFactory) {
 		ScalarConversionPolicyResult result = new ScalarConversionPolicyResult();
@@ -34,24 +35,11 @@ public class EnumScalarConversionPolicy implements IScalarConversionPolicy {
 		}
 
 		result.isValid = true;
-		synchronized (_values) {
-			Map<Integer, ScalarValue> enumValues = _values.get(value.getClass());
-			if (enumValues == null) {
-				enumValues = new HashMap<Integer, ScalarValue>();
-				_values.put(value.getClass(), enumValues);
-			}
+		ConcurrentHashMap<Integer, ScalarValue> enumValues = _values.computeIfAbsent(
+				value.getClass(), k -> new ConcurrentHashMap<>());
 
-			@SuppressWarnings("rawtypes")
-			Integer enumOrdinal = ((Enum) value).ordinal();
-
-			ScalarValue resultValue = enumValues.get(enumOrdinal);
-			if (resultValue == null) {
-				resultValue = new ScalarValue(value);
-				enumValues.put(enumOrdinal, resultValue);
-			}
-
-			result.result = resultValue;
-		}
+		Integer enumOrdinal = ((Enum) value).ordinal();
+		result.result = enumValues.computeIfAbsent(enumOrdinal, k -> new ScalarValue(value));
 		return result;
 	}
 }

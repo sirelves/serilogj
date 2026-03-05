@@ -132,7 +132,11 @@ public class Reflection {
                 continue;
             }
 
-            field.setAccessible(true);
+            try {
+                field.setAccessible(true);
+            } catch (Exception e) {
+                continue;
+            }
             fields.add(new FieldProperty(field, name));
         }
 
@@ -174,7 +178,11 @@ public class Reflection {
 
             alias = alias.substring(0, 1).toLowerCase() + (alias.length() > 1 ? alias.substring(1) : "");
             
-            method.setAccessible(true);
+            try {
+                method.setAccessible(true);
+            } catch (Exception e) {
+                continue;
+            }
             methods.put(alias, new MethodProperty(method, alias));
         }
 

@@ -71,8 +71,13 @@ public class LogEvent {
 		properties.put(property.getName(), property.getValue());
 	}
 
-	public void remotePropertyIfPresent(String propertyName) {
+	public void removePropertyIfPresent(String propertyName) {
 		properties.remove(propertyName);
+	}
+
+	@Deprecated
+	public void remotePropertyIfPresent(String propertyName) {
+		removePropertyIfPresent(propertyName);
 	}
 
 	public void renderMessage(Writer output, Locale locale) throws IOException {

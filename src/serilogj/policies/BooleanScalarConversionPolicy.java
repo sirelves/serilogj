@@ -25,6 +25,7 @@ public class BooleanScalarConversionPolicy implements IScalarConversionPolicy {
 			// We ignore this error
 		}
 
+		result.result = resultValue;
 		result.isValid = resultValue != null;
 		return result;
 	}

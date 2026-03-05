@@ -35,7 +35,7 @@ public class PropertyBinder {
 		if (messageTemplateParameters == null || messageTemplateParameters.length == 0) {
 			if (template.getNamedTokens() != null
 					|| (template.getPositionalTokens() != null && !template.getPositionalTokens().isEmpty())) {
-				SelfLog.writeLine("Required properties not provided for:if () %1", template);
+				SelfLog.writeLine("Required properties not provided for: %s", template);
 			}
 
 			return NoProperties;
@@ -50,14 +50,14 @@ public class PropertyBinder {
 		ArrayList<PropertyToken> positionalProperties = template.getPositionalTokens();
 
 		if (positionalProperties.size() != messageTemplateParameters.length) {
-			SelfLog.writeLine("Positional property count does not match parameter count: %1", template);
+			SelfLog.writeLine("Positional property count does not match parameter count: %s", template);
 		}
 
 		LogEventProperty[] arr = new LogEventProperty[messageTemplateParameters.length];
 		for (PropertyToken property : positionalProperties) {
 			int position = property.getPosition();
 			if (position < 0 || position >= messageTemplateParameters.length) {
-				SelfLog.writeLine("Unassigned positional value %1 in: %2", position, template);
+				SelfLog.writeLine("Unassigned positional value %s in: %s", position, template);
 			} else {
 				arr[position] = constructProperty(property, messageTemplateParameters[position]);
 			}
@@ -82,7 +82,7 @@ public class PropertyBinder {
 		int matchedRun = namedProperties.size();
 		if (namedProperties.size() != messageTemplateParameters.length) {
 			matchedRun = Math.min(namedProperties.size(), messageTemplateParameters.length);
-			SelfLog.writeLine("Named property count does not match parameter count: {0}", template);
+			SelfLog.writeLine("Named property count does not match parameter count: %s", template);
 		}
 
 		ArrayList<LogEventProperty> result = new ArrayList<LogEventProperty>(matchedRun);

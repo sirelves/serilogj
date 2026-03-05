@@ -70,6 +70,10 @@ public class FileSink implements ILogEventSink, Closeable {
 			}
 
 			if (fileSizeLimitBytes != null) {
+				File file = new File(filename);
+				if (file.length() >= fileSizeLimitBytes) {
+					return;
+				}
 			}
 
 			try {
@@ -95,6 +99,7 @@ public class FileSink implements ILogEventSink, Closeable {
 			if (output != fileWriter) {
 				fileWriter.close();
 			}
+			output = null;
 			fileWriter = null;
 		}
 	}
