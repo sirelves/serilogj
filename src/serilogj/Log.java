@@ -38,7 +38,7 @@ import serilogj.events.LogEventLevel;
  * 
  */
 public class Log {
-	private static ILogger _logger = new SilentLogger();
+	private static volatile ILogger _logger = new SilentLogger();
 
 	/**
 	 * The globally-shared logger.

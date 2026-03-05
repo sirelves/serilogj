@@ -34,6 +34,7 @@ public class LoggerConfiguration {
 	private LoggingLevelSwitch levelSwitch;
 	private int maximumDestructuringDepth = 10;
 	private boolean loggerCreated;
+	private final HashMap<String, LogEventLevel> minimumLevelOverrides = new HashMap<String, LogEventLevel>();
 
 	public LoggerConfiguration with(ILogEventEnricher enricher) {
 		if (enricher == null) {
@@ -105,6 +106,17 @@ public class LoggerConfiguration {
 		return this;
 	}
 
+	public LoggerConfiguration setMinimumLevelOverride(String sourceContext, LogEventLevel level) {
+		if (sourceContext == null || sourceContext.isEmpty()) {
+			throw new IllegalArgumentException("sourceContext");
+		}
+		if (level == null) {
+			throw new IllegalArgumentException("level");
+		}
+		minimumLevelOverrides.put(sourceContext, level);
+		return this;
+	}
+
 	/**
 	 * Create a logger using the configured sinks, enrichers and minimum level.
 	 * 
@@ -129,6 +141,7 @@ public class LoggerConfiguration {
 				additionalDestructuringPolicies.toArray(new IDestructuringPolicy[0]));
 		MessageTemplateProcessor processor = new MessageTemplateProcessor(converter);
 
-		return new Logger(processor, minimumLevel, sink, enrichers.toArray(new ILogEventEnricher[0]), levelSwitch, true);
+		return new Logger(processor, minimumLevel, sink, enrichers.toArray(new ILogEventEnricher[0]), levelSwitch,
+				minimumLevelOverrides.isEmpty() ? null : new HashMap<>(minimumLevelOverrides), true);
 	}
 }

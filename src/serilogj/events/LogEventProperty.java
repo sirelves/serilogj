@@ -67,16 +67,22 @@ public class LogEventProperty {
 	 * @return True if the name is valid; otherwise, false.
 	 */
 	public static boolean isValidName(String name) {
-		if (name == null) {
+		if (name == null || name.isEmpty()) {
 			return false;
 		}
 
-		for (int i = 0; i < name.length(); i++) {
-			if (name.charAt(i) != ' ') {
-				return true;
+		char first = name.charAt(0);
+		if (!Character.isLetter(first) && first != '_') {
+			return false;
+		}
+
+		for (int i = 1; i < name.length(); i++) {
+			char c = name.charAt(i);
+			if (!Character.isLetterOrDigit(c) && c != '_') {
+				return false;
 			}
 		}
 
-		return false;
+		return true;
 	}
 }
