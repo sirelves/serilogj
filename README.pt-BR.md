@@ -249,11 +249,52 @@ mvn package      # Gerar JAR
 mvn verify       # Build completo + testes
 ```
 
+## O Que Mudou Neste Fork
+
+### Correcoes de Bugs
+
+- **RollingFileSink** — Condicao duplicada que podia pular a rotacao de arquivo
+- **BooleanScalarConversionPolicy** — Valores booleanos eram detectados mas nunca retornados (resultado sempre null)
+- **ScalarValue** — Formatacao de TemporalAccessor (LocalDateTime, ZonedDateTime, etc.) quebrada por condicao invertida
+- **LogEventProperty** — `isValidName()` aceitava qualquer string com pelo menos um caractere que nao fosse espaco; agora valida que nomes comecem com letra ou underscore e contenham apenas letras, digitos ou underscores
+- **LogEvent** — Typo corrigido: `remotePropertyIfPresent` → `removePropertyIfPresent` (nome antigo mantido como deprecated)
+- **PropertyBinder** — Todas as format strings internas estavam invalidas (`%1`, `%2`, `{0}`), causando erros no autodiagnostico
+- **FileSink** — Limite de tamanho de arquivo estava declarado mas nunca era verificado; agora checa o tamanho antes de escrever
+
+### Compatibilidade JDK 8–25
+
+- **Reflection** — `setAccessible(true)` falha no JDK 16+ sem `--add-opens`; agora envolvido em try-catch com skip silencioso
+- **JsonFormatter** — `new Integer(c)` (removido no JDK 16) substituido por `(int) c`
+- **SeqSink** — Charset hardcoded `"UTF8"` substituido por `StandardCharsets.UTF_8`
+- **Maven Compiler Plugin** — Atualizado de 3.0 (2012) para 3.13.0
+
+### Vazamentos de Recursos e Thread Safety
+
+- **SeqSink** — Conexoes HTTP e streams nunca eram fechados corretamente; agora usa try-with-resources e `disconnect()`. Concatenacao de string em loop substituida por StringBuilder
+- **FileSink** — `output` nao era setado para null apos o close
+- **MessageTemplateCache** — HashMap com blocos synchronized substituido por ConcurrentHashMap; elimina race conditions
+- **Log** — Campo `_logger` agora e `volatile` para visibilidade segura entre threads
+- **EnumScalarConversionPolicy** — HashMap com sincronizacao fraca substituido por ConcurrentHashMap + `computeIfAbsent`
+- **JsonFormatter** — SimpleDateFormat criado a cada chamada substituido por ThreadLocal para reuso
+
+### Novas Funcionalidades
+
+- **Console Sink Simples** — Saida no console sem codigos ANSI, util para ambientes sem suporte a cores (CI, redirecionamento para arquivo)
+- **Async Wrapper Sink** — Envolve qualquer sink com thread em background e BlockingQueue para escrita de logs sem bloquear a thread principal
+- **Enrichers** — ThreadId, ThreadName, ProcessId, MachineName — adicionam informacoes de contexto de execucao a cada evento de log
+- **Override de Nivel Minimo** — Define niveis de log diferentes por contexto de origem (ex: silenciar uma lib barulhenta sem afetar o resto do codigo)
+- **Configuracao por Arquivo** — Configura nivel minimo e enrichers via arquivo `.properties`; permite registrar sinks customizados via SinkRegistry
+
+### Testes e CI
+
+- **50 testes unitarios** em 9 classes cobrindo parsers, formatadores, politicas, sinks, cache, reflection e fluxo completo de logging
+- **JUnit 5** + Maven Surefire Plugin 3.2.5
+- **CI no GitHub Actions** com matrix de JDK: 8, 11, 17, 21, 25
+- Todos os testes passam no JDK 8, 17 e 25 (testado localmente)
+
 ## Creditos
 
 Criado originalmente por [Jerremy Koot](https://github.com/jerremykoot) e [80dB](https://github.com/80dB) como um port Java do [Serilog](https://serilog.net) de Nicholas Blumhardt.
-
-Este fork inclui correcoes de bugs, compatibilidade com JDK 8-25, correcoes de vazamento de recursos, melhorias de thread safety, suite de testes e novas funcionalidades (enrichers, console sink, async sink, override de nivel minimo, configuracao por arquivo).
 
 ## Licenca
 

@@ -243,11 +243,52 @@ mvn package      # Build JAR
 mvn verify       # Full build + tests
 ```
 
+## What's New in This Fork
+
+### Bug Fixes
+
+- **RollingFileSink** — Fixed duplicate condition that could skip file rotation
+- **BooleanScalarConversionPolicy** — Boolean values were detected but never returned (result was always null)
+- **ScalarValue** — TemporalAccessor formatting (LocalDateTime, ZonedDateTime, etc.) was broken due to inverted condition
+- **LogEventProperty** — `isValidName()` accepted any string with at least one non-space character; now validates that names start with a letter or underscore and contain only letters, digits, or underscores
+- **LogEvent** — Fixed typo `remotePropertyIfPresent` → `removePropertyIfPresent` (old name kept as deprecated)
+- **PropertyBinder** — All internal log format strings were invalid (`%1`, `%2`, `{0}`), causing errors in self-diagnostics
+- **FileSink** — File size limit was declared but never enforced; now checks file size before writing
+
+### JDK 8–25 Compatibility
+
+- **Reflection** — `setAccessible(true)` fails on JDK 16+ without `--add-opens`; now wrapped in try-catch with graceful skip
+- **JsonFormatter** — Replaced `new Integer(c)` (removed in JDK 16) with `(int) c`
+- **SeqSink** — Replaced hardcoded charset string `"UTF8"` with `StandardCharsets.UTF_8`
+- **Maven Compiler Plugin** — Updated from 3.0 (2012) to 3.13.0
+
+### Resource Leaks & Thread Safety
+
+- **SeqSink** — HTTP connections and streams were never properly closed; now uses try-with-resources and `disconnect()`. String concatenation in loop replaced with StringBuilder
+- **FileSink** — `output` was not set to null after close
+- **MessageTemplateCache** — HashMap with synchronized blocks replaced with ConcurrentHashMap; eliminates race conditions
+- **Log** — `_logger` field is now `volatile` for safe cross-thread visibility
+- **EnumScalarConversionPolicy** — HashMap with weak synchronization replaced with ConcurrentHashMap + `computeIfAbsent`
+- **JsonFormatter** — SimpleDateFormat created on every call replaced with ThreadLocal for reuse
+
+### New Features
+
+- **Plain Console Sink** — Simple console output without ANSI escape codes, useful for environments that don't support colors (CI, file redirection)
+- **Async Wrapper Sink** — Wraps any sink with a background thread and BlockingQueue for non-blocking log writes
+- **Enrichers** — ThreadId, ThreadName, ProcessId, MachineName — attach runtime context to every log event
+- **Minimum Level Override** — Set different log levels per source context (e.g., silence a noisy library while keeping your own code verbose)
+- **Properties File Configuration** — Configure minimum level and enrichers from a `.properties` file; register custom sinks via SinkRegistry
+
+### Testing & CI
+
+- **50 unit tests** across 9 test classes covering parsers, formatters, policies, sinks, cache, reflection, and end-to-end logging
+- **JUnit 5** + Maven Surefire Plugin 3.2.5
+- **CI workflow** for GitHub Actions with JDK matrix: 8, 11, 17, 21, 25
+- All tests pass on JDK 8, 17, and 25 (tested locally)
+
 ## Credits
 
 Originally created by [Jerremy Koot](https://github.com/jerremykoot) and [80dB](https://github.com/80dB) as a Java port of [Serilog](https://serilog.net) by Nicholas Blumhardt.
-
-This fork includes bug fixes, JDK 8-25 compatibility, resource leak fixes, thread safety improvements, test suite, and new features (enrichers, console sink, async sink, minimum level overrides, properties file configuration).
 
 ## License
 
